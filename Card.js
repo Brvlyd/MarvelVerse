@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width / 2 - 24;
 
-const CharacterCard = ({ item, isFavorite, onToggleFavorite }) => {
+const CharacterCard = ({ item, isFavorite, onToggleFavorite, onPress }) => {
   const scaleAnim = useState(new Animated.Value(1))[0];
   const shadowAnim = useState(new Animated.Value(1))[0];
 
@@ -45,6 +45,7 @@ const CharacterCard = ({ item, isFavorite, onToggleFavorite }) => {
       activeOpacity={1}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
+      onPress={() => onPress(item)}
     >
       <Animated.View style={[
         styles.cardContainer,
@@ -151,8 +152,8 @@ const styles = StyleSheet.create({
   },
   name: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontFamily: 'PoppinsRegular',
+    fontSize: 16,
+    fontFamily: 'Poppins',
     fontWeight: '700',
     marginBottom: 4,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',

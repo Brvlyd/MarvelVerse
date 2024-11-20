@@ -6,99 +6,59 @@ import {
   StyleSheet, 
   ActivityIndicator, 
   SafeAreaView,
-  TextInput,
-  TouchableOpacity,
   Platform,
   StatusBar,
-  Animated,
+  ScrollView,
+  TouchableOpacity,
+  Image,
   Dimensions 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as Font from 'expo-font';
+import { LinearGradient } from 'expo-linear-gradient';
 import CharacterCard from './Card';
+import ProfileScreen from './ProfileScreen';
+import DetailScreen from './DetailScreen';
+import SearchScreen from './SearchScreen';
+import { NotificationModal } from './modals';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width / 2 - 24;
 
 const publicKey = '2f1fd8ca50b11bb6eed11409974d9cfe';
 const hash = 'd3ee58dc3fc006a3051b143c3eea0144';
 const timestamp = 1;
 
-// Custom Components
-const SearchBar = ({ searchQuery, onChangeText, onClear, onSubmit }) => (
-  <View style={styles.searchContainer}>
-    <View style={styles.searchInputContainer}>
-      <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search heroes..."
-        placeholderTextColor="#666"
-        value={searchQuery}
-        onChangeText={onChangeText}
-        autoCorrect={false}
-        blurOnSubmit={false}
-        autoCapitalize="none"
-        returnKeyType="search"
-        enablesReturnKeyAutomatically={true}
-        onSubmitEditing={onSubmit}
-      />
-      {searchQuery !== '' && (
-        <TouchableOpacity 
-          style={styles.clearButton} 
-          onPress={onClear}
-        >
-          <Ionicons name="close-circle" size={20} color="#666" />
-        </TouchableOpacity>
-      )}
-    </View>
-  </View>
-);
+// Categories for Home screen
+const categories = [
+  { id: 'popular', name: 'Popular', icon: 'star' },
+  { id: 'avengers', name: 'Avengers', icon: 'shield' },
+  { id: 'xmen', name: 'X-Men', icon: 'flash' },
+  { id: 'villains', name: 'Villains', icon: 'skull' },
+];
 
-const Navbar = ({ activeTab, onTabPress }) => {
-  const tabs = [
-    { id: 'home', icon: 'home', label: 'Home' },
-    { id: 'search', icon: 'search', label: 'Search' },
-    { id: 'favorites', icon: 'heart', label: 'Favorites' },
-    { id: 'profile', icon: 'person', label: 'Profile' },
-  ];
+// Featured heroes for Home screen carousel
+const featuredHeroes = [
+  { 
+    id: 1, 
+    name: 'Iron Man', 
+    type: 'Avenger',
+    image: require('./assets/ironman.jpeg')
+  },
+  { 
+    id: 2, 
+    name: 'Spider-Man', 
+    type: 'Street Level', 
+    image: require('./assets/spider-man.jpeg')
+  },
+  { 
+    id: 3, 
+    name: 'Thor', 
+    type: 'Cosmic',
+    image: require('./assets/thor.jpeg')
+  },
+];
 
-  return (
-    <View style={styles.navbar}>
-      {tabs.map((tab) => (
-        <TouchableOpacity
-          key={tab.id}
-          style={styles.tabButton}
-          onPress={() => onTabPress(tab.id)}
-        >
-          <View style={[
-            styles.tabContent,
-            activeTab === tab.id && styles.activeTabContent
-          ]}>
-            <Animated.View style={[
-              styles.iconContainer,
-              activeTab === tab.id && styles.activeIconContainer
-            ]}>
-              <Ionicons
-                name={activeTab === tab.id ? `${tab.icon}` : `${tab.icon}-outline`}
-                size={24}
-                color={activeTab === tab.id ? '#ED1D24' : '#666'}
-              />
-            </Animated.View>
-            <Text style={[
-              styles.tabLabel,
-              activeTab === tab.id && styles.activeTabLabel
-            ]}>
-              {tab.label}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-};
-
-// Main Screen Component
 export default function MarvelScreen() {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,13 +68,15 @@ export default function MarvelScreen() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [favorites, setFavorites] = useState([]);
+  const [selectedCharacter, setSelectedCharacter] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     async function loadFonts() {
       try {
         await Font.loadAsync({
           'Poppins': require('./assets/fonts/Poppins-Regular.ttf'),
-          'PoppinsRegular': require("./assets/fonts/Poppins-Regular.ttf"),
+          'PoppinsRegular': require('./assets/fonts/Poppins-Regular.ttf'),
           'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
           'MarvelRegular': require('./assets/fonts/Marvel-Regular.ttf'),
         });
@@ -172,6 +134,10 @@ export default function MarvelScreen() {
     });
   };
 
+  const handleCharacterPress = (character) => {
+    setSelectedCharacter(character);
+  };
+
   const handleClearSearch = () => {
     setSearchQuery('');
     fetchMarvelCharacters('');
@@ -184,93 +150,183 @@ export default function MarvelScreen() {
         item={item}
         isFavorite={isFavorite}
         onToggleFavorite={toggleFavorite}
+        onPress={handleCharacterPress}
       />
     );
   };
 
-  if (loading && isInitialLoad) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#ED1D24" />
-        <Text style={styles.loadingText}>Loading Marvel Heroes...</Text>
+  const HomeHeader = () => (
+    <View style={styles.homeHeader}>
+      <View style={styles.welcomeContainer}>
+        <Text style={styles.welcomeText}>Welcome Back!</Text>
+        <Text style={styles.dateText}>
+          {new Date().toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            month: 'long', 
+            day: 'numeric' 
+          })}
+        </Text>
       </View>
-    );
-  }
+      <TouchableOpacity 
+        style={styles.notificationButton}
+        onPress={() => setShowNotifications(true)}
+      >
+        <Ionicons name="notifications-outline" size={24} color="#333" />
+        <View style={styles.notificationBadge} />
+      </TouchableOpacity>
+    </View>
+  );
 
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
+  const CategoryList = () => (
+    <View style={styles.categorySection}>
+      <Text style={styles.sectionTitle}>Categories</Text>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoryContainer}
+      >
+        {categories.map((category) => (
+          <TouchableOpacity 
+            key={category.id} 
+            style={styles.categoryCard}
+          >
+            <View style={styles.categoryIcon}>
+              <Ionicons name={category.icon} size={24} color="#ED1D24" />
+            </View>
+            <Text style={styles.categoryName}>{category.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  const FeaturedCarousel = () => (
+    <View style={styles.featuredSection}>
+      <Text style={styles.sectionTitle}>Featured Heroes</Text>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.featuredContainer}
+      >
+        {featuredHeroes.map((hero) => (
+          <View key={hero.id} style={styles.featuredCard}>
+            <Image
+              source={hero.image}  // Changed this line
+              style={styles.featuredImage}
+            />
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.8)']}
+              style={styles.featuredGradient}
+            />
+            <View style={styles.featuredInfo}>
+              <Text style={styles.featuredName}>{hero.name}</Text>
+              <Text style={styles.featuredType}>{hero.type}</Text>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  const HomeScreen = ({ characters, renderCharacterCard }) => (
+    <ScrollView 
+      style={styles.homeScreen} 
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[styles.homeContent, styles.screenPadding]}
+    >
+      <HomeHeader />
+      <CategoryList />
+      <FeaturedCarousel />
+      
+      <View style={styles.trendingSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Trending Heroes</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllButton}>See All</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.trendingGrid}>
+          {characters.slice(0, 6).map((item) => (
+            <View key={item.id} style={styles.trendingGridItem}>
+              {renderCharacterCard({ item })}
+            </View>
+          ))}
+        </View>
       </View>
-    );
-  }
+    </ScrollView>
+  );
 
   if (!fontsLoaded) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ED1D24" />
-        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
   const renderContent = () => {
+    if (selectedCharacter) {
+      return (
+        <DetailScreen
+          character={selectedCharacter}
+          onClose={() => setSelectedCharacter(null)}
+          isFavorite={favorites.some(fav => fav.id === selectedCharacter.id)}
+          onToggleFavorite={toggleFavorite}
+        />
+      );
+    }
+
     switch (activeTab) {
       case 'home':
+        return (
+          <View style={styles.screenContainer}>
+            <HomeScreen 
+              characters={characters}
+              renderCharacterCard={renderCharacterCard}
+            />
+          </View>
+        );
       case 'search':
         return (
-          <>
-            <SearchBar
+          <View style={styles.screenContainer}>
+            <SearchScreen
               searchQuery={searchQuery}
-              onChangeText={setSearchQuery}
-              onClear={handleClearSearch}
-              onSubmit={() => fetchMarvelCharacters(searchQuery)}
+              setSearchQuery={setSearchQuery}
+              handleClearSearch={handleClearSearch}
+              characters={characters}
+              loading={loading}
+              renderCharacterCard={renderCharacterCard}
+              handleSearch={fetchMarvelCharacters}
             />
-            {loading && !isInitialLoad ? (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="large" color="#ED1D24" />
-              </View>
-            ) : null}
-
-            {characters.length === 0 ? (
-              <View style={styles.noResultsContainer}>
-                <Text style={styles.noResultsText}>No characters found</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={characters}
-                keyExtractor={(item) => item.id.toString()}
-                keyboardShouldPersistTaps="always"
-                numColumns={2}
-                contentContainerStyle={styles.listContainer}
-                columnWrapperStyle={styles.columnWrapper}
-                renderItem={renderCharacterCard}
-                showsVerticalScrollIndicator={false}
-              />
-            )}
-          </>
+          </View>
         );
       case 'favorites':
         return (
-          <FlatList
-            data={favorites}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
-            contentContainerStyle={styles.listContainer}
-            columnWrapperStyle={styles.columnWrapper}
-            renderItem={renderCharacterCard}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.noResultsContainer}>
-                <Text style={styles.noResultsText}>No favorites yet</Text>
-              </View>
-            }
-          />
+          <View style={styles.screenContainer}>
+            <FlatList
+              data={favorites}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={2}
+              contentContainerStyle={[styles.listContainer, styles.screenPadding]}
+              columnWrapperStyle={styles.columnWrapper}
+              renderItem={renderCharacterCard}
+              ListEmptyComponent={
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultsText}>No favorites yet</Text>
+                </View>
+              }
+            />
+          </View>
         );
       case 'profile':
         return (
-          <View style={styles.profileContainer}>
-            <Text style={styles.profileText}>Profile Screen Coming Soon</Text>
+          <View style={styles.screenContainer}>
+            <ScrollView 
+              contentContainerStyle={styles.screenPadding}
+              showsVerticalScrollIndicator={false}
+            >
+              <ProfileScreen />
+            </ScrollView>
           </View>
         );
       default:
@@ -278,34 +334,88 @@ export default function MarvelScreen() {
     }
   };
 
+  // Helper function to get the correct icon name for navigation tabs
+  const getIconName = (tabName) => {
+    const icons = {
+      home: activeTab === tabName ? 'home' : 'home-outline',
+      search: activeTab === tabName ? 'search' : 'search-outline',
+      favorites: activeTab === tabName ? 'heart' : 'heart-outline',
+      profile: activeTab === tabName ? 'person' : 'person-outline'
+    };
+    return icons[tabName];
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.headerContainer}>
-        <View style={styles.headerTextContainer}>
-          <Text style={styles.headerText}>MARVEL</Text>
+      {!selectedCharacter && (
+        <View style={styles.headerContainer}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerText}>MARVEL</Text>
+          </View>
+          <Text style={styles.headerSubText}>Universe</Text>
         </View>
-        <Text style={styles.headerSubText}>Universe</Text>
-      </View>
+      )}
       
       {renderContent()}
       
-      <Navbar 
-        activeTab={activeTab}
-        onTabPress={setActiveTab}
+      {!selectedCharacter && (
+        <View style={styles.navbar}>
+          {['home', 'search', 'favorites', 'profile'].map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={styles.tabButton}
+              onPress={() => setActiveTab(tab)}
+            >
+              <View style={[
+                styles.tabContent,
+                activeTab === tab && styles.activeTabContent
+              ]}>
+                <View style={[
+                  styles.iconContainer,
+                  activeTab === tab && styles.activeIconContainer
+                ]}>
+                  <Ionicons
+                    name={getIconName(tab)}
+                    size={24}
+                    color={activeTab === tab ? '#ED1D24' : '#666'}
+                  />
+                </View>
+                <Text style={[
+                  styles.tabLabel,
+                  activeTab === tab && styles.activeTabLabel
+                ]}>
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      <NotificationModal 
+        visible={showNotifications}
+        onClose={() => setShowNotifications(false)}
       />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // ... Styles tetap sama seperti sebelumnya ...
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  screenContainer: {
+    flex: 1,
+  },
+  screenPadding: {
+    paddingBottom: Platform.OS === 'ios' ? 90 : 80,
+  },
   headerContainer: {
     padding: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 60,
+    paddingTop: Platform.OS === 'android' ? 40 : 20,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     shadowColor: "#000",
@@ -316,90 +426,215 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    marginBottom: 10,
   },
   headerTextContainer: {
     backgroundColor: '#ED1D24',
     paddingVertical: 5,
+    paddingHorizontal: 15,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '29%',
     marginBottom: 3,
+  },
+  headerText: {
+    color: '#FFFFFF',
+    fontSize: 60,
+    fontFamily: 'MarvelRegular',
+    letterSpacing: -1,
+  },
+  headerSubText: {
+    color: '#333',
+    fontSize: 20,
+    fontFamily: 'Poppins',
+    marginTop: 0,
+  },
+  homeScreen: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  homeContent: {
+    paddingBottom: Platform.OS === 'ios' ? 90 : 80,
+  },
+  homeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
-  headerText: {
-    color: '#FFFFFF',
-    fontSize: 49,
-    fontFamily: 'MarvelRegular',
-    letterSpacing: -1,
-    textAlign: 'center',
-    marginBottom: 3,
-    marginTop: 1,
+  welcomeContainer: {
+    flex: 1,
   },
-  headerSubText: {
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: '700',
     color: '#333',
-    fontSize: 18,
     fontFamily: 'Poppins',
-    fontWeight: '500',
-    marginTop: 5,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
-  searchContainer: {
-    padding: 15,
-    backgroundColor: 'transparent',
+  dateText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'PoppinsRegular',
+    marginTop: 4,
   },
-  searchInputContainer: {
-    flexDirection: 'row',
+  notificationButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#ED1D24',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  categorySection: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    fontFamily: 'Poppins',
+    marginBottom: 15,
+  },
+  categoryContainer: {
+    paddingVertical: 10,
+  },
+  categoryCard: {
+    width: 100,
+    height: 100,
     backgroundColor: '#FFFFFF',
-    borderRadius: 15,
-    paddingHorizontal: 15,
-    height: 50,
+    borderRadius: 20,
+    marginRight: 15,
+    padding: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  searchIcon: {
-    marginRight: 10,
+  categoryIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FFEBEE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  searchInput: {
-    flex: 1,
+  categoryName: {
+    fontSize: 14,
     color: '#333',
-    fontSize: 16,
     fontFamily: 'PoppinsRegular',
+    textAlign: 'center',
   },
-  clearButton: {
-    padding: 8,
+  featuredSection: {
+    padding: 20,
   },
-  listContainer: {
-    padding: 12,
-    paddingBottom: 100,
+  featuredContainer: {
+    paddingVertical: 10,
   },
-  columnWrapper: {
+  featuredCard: {
+    width: width * 0.7,
+    height: 200,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginRight: 15,
+    overflow: 'hidden',
+    position: 'relative',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  featuredImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  featuredGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '50%',
+  },
+  featuredInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 15,
+  },
+  featuredName: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontFamily: 'Poppins',
+    fontWeight: '700',
+  },
+  featuredType: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontFamily: 'PoppinsRegular',
+    opacity: 0.8,
+  },
+  trendingSection: {
+    padding: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 8,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  seeAllButton: {
+    color: '#ED1D24',
+    fontSize: 14,
+    fontFamily: 'Poppins',
+  },
+  trendingGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  trendingGridItem: {
+    width: '48%',
+    marginBottom: 15,
   },
   navbar: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
     paddingVertical: 10,
     paddingBottom: Platform.OS === 'ios' ? 25 : 10,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -412,6 +647,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    zIndex: 1000,
   },
   tabButton: {
     flex: 1,
@@ -420,18 +656,18 @@ const styles = StyleSheet.create({
   tabContent: {
     alignItems: 'center',
     padding: 4,
-    borderRadius: 20,
   },
   activeTabContent: {
     backgroundColor: '#FFEBEE',
+    borderRadius: 20,
+    paddingHorizontal: 12,
   },
   iconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
+    width: 40,
+    height: 40,
     justifyContent: 'center',
-    marginBottom: 2,
+    alignItems: 'center',
+    borderRadius: 20,
   },
   activeIconContainer: {
     backgroundColor: '#FFFFFF',
@@ -447,12 +683,20 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 12,
     color: '#666',
-    fontFamily: 'Poppins',
+    fontFamily: 'PoppinsRegular',
     marginTop: 4,
   },
   activeTabLabel: {
     color: '#ED1D24',
-    fontWeight: '600',
+    fontFamily: 'Poppins',
+  },
+  listContainer: {
+    padding: 15,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 80,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    padding: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -460,60 +704,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F5F5F5',
   },
-  loadingText: {
-    color: '#333',
-    marginTop: 12,
-    fontSize: 16,
-    fontFamily: 'Poppins',
-    textAlign: 'center',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
   noResultsContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 50,
+    paddingTop: 100,
   },
   noResultsText: {
-    color: '#333',
     fontSize: 16,
-    fontFamily: 'Poppins',
-    textAlign: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 20,
-  },
-  errorText: {
-    color: '#ED1D24',
-    fontSize: 16,
-    fontFamily: 'Poppins',
-    textAlign: 'center',
-  },
-  profileContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 20,
-  },
-  profileText: {
-    fontSize: 18,
-    color: '#333',
-    fontFamily: 'Poppins',
+    color: '#666',
+    fontFamily: 'PoppinsRegular',
     textAlign: 'center',
   },
 });
