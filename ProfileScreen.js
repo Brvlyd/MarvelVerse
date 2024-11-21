@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -20,41 +20,53 @@ import { useTheme } from './ThemeContext';
 const STORAGE_KEYS = {
   USER_INFO: '@user_info',
   SETTINGS: '@settings',
-  NOTIFICATIONS: '@notifications'
+  NOTIFICATIONS: '@notifications',
+  CURRENT_USER: '@current_user'
 };
 
 const MODAL_POSITIONS = {
   BOTTOM: 'bottom'
 };
 
-const MenuItem = ({ title, icon, onPress, theme, fontSizes }) => (
+const MenuItem = ({ title, icon, onPress, theme, fontSizes, isDestructive }) => (
   <TouchableOpacity 
     style={[styles.menuItem, { backgroundColor: theme.surface }]} 
     onPress={onPress}
     activeOpacity={0.7}
   >
     <View style={[styles.menuIconContainer, { backgroundColor: theme.background }]}>
-      <Ionicons name={icon} size={22} color={theme.textSecondary} />
+      <Ionicons name={icon} size={22} color={isDestructive ? '#ED1D24' : theme.textSecondary} />
     </View>
-    <Text style={[styles.menuText, { 
-      color: theme.text,
-      fontSize: fontSizes.md 
-    }]}>{title}</Text>
-    <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+    <Text style={[
+      styles.menuText, 
+      { 
+        color: isDestructive ? '#ED1D24' : theme.text,
+        fontSize: fontSizes.md 
+      }
+    ]}>
+      {title}
+    </Text>
+    <Ionicons 
+      name="chevron-forward" 
+      size={20} 
+      color={isDestructive ? '#ED1D24' : theme.textSecondary} 
+    />
   </TouchableOpacity>
 );
 
-const ProfileScreen = ({ favoriteCount = 0 }) => {
+const ProfileScreen = ({ favoriteCount = 0, onLogout }) => {
   const { theme, fontSizes, isDarkMode, fontSize, toggleDarkMode, changeFontSize } = useTheme();
   
   const [userInfo, setUserInfo] = useState({
-    name: "Bravely Dirgayuska",
-    email: "bravelydirgayuska@gmail.com",
+    name: "",
+    email: "",
     favoriteHeroes: favoriteCount,
+    createdAt: "",
+    loginTime: ""
   });
 
-  const [editedName, setEditedName] = useState(userInfo.name);
-  const [editedEmail, setEditedEmail] = useState(userInfo.email);
+  const [editedName, setEditedName] = useState("");
+  const [editedEmail, setEditedEmail] = useState("");
   const [activeModal, setActiveModal] = useState(null);
   const [notifications, setNotifications] = useState({
     pushEnabled: true,
@@ -63,6 +75,72 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
     updates: true,
     newsletters: false
   });
+
+  useEffect(() => {
+    loadUserInfo();
+    loadNotificationSettings();
+  }, []);
+
+  const loadUserInfo = async () => {
+    try {
+      const userData = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      if (userData) {
+        const user = JSON.parse(userData);
+        setUserInfo({
+          name: user.name || "",
+          email: user.email || "",
+          favoriteHeroes: favoriteCount,
+          createdAt: user.createdAt || "",
+          loginTime: user.loginTime || ""
+        });
+        setEditedName(user.name || "");
+        setEditedEmail(user.email || "");
+      }
+    } catch (error) {
+      console.error('Error loading user info:', error);
+    }
+  };
+
+  const loadNotificationSettings = async () => {
+    try {
+      const settings = await AsyncStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+      if (settings) {
+        setNotifications(JSON.parse(settings));
+      }
+    } catch (error) {
+      console.error('Error loading notification settings:', error);
+    }
+  };
+
+  const handleLogoutPress = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.multiRemove([
+                STORAGE_KEYS.CURRENT_USER,
+                '@auth_token'
+              ]);
+              onLogout();
+            } catch (error) {
+              console.error('Error during logout:', error);
+              Alert.alert('Error', 'Failed to logout. Please try again.');
+            }
+          }
+        }
+      ],
+      { cancelable: true }
+    );
+  };
 
   const handleNotificationToggle = useCallback((key) => {
     setNotifications(prev => {
@@ -95,7 +173,7 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
     }
   }, []);
 
-  const handleUpdateProfile = useCallback(() => {
+  const handleUpdateProfile = useCallback(async () => {
     if (!editedName.trim() || !editedEmail.trim()) {
       Alert.alert('Error', 'Name and email cannot be empty');
       return;
@@ -107,23 +185,31 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
       return;
     }
 
-    setUserInfo(prev => ({
-      ...prev,
-      name: editedName.trim(),
-      email: editedEmail.trim()
-    }));
-    setActiveModal(null);
-
     try {
-      AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify({
-        name: editedName.trim(),
-        email: editedEmail.trim(),
-        favoriteHeroes: favoriteCount
-      }));
+      const currentUser = await AsyncStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      if (currentUser) {
+        const updatedUser = {
+          ...JSON.parse(currentUser),
+          name: editedName.trim(),
+          email: editedEmail.trim()
+        };
+
+        await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedUser));
+        
+        setUserInfo(prev => ({
+          ...prev,
+          name: editedName.trim(),
+          email: editedEmail.trim()
+        }));
+
+        setActiveModal(null);
+        Alert.alert('Success', 'Profile updated successfully');
+      }
     } catch (error) {
-      console.error('Error saving user info:', error);
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
     }
-  }, [editedName, editedEmail, favoriteCount]);
+  }, [editedName, editedEmail]);
 
   const menuItems = [
     { 
@@ -150,6 +236,13 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
       icon: 'help-circle-outline',
       onPress: () => setActiveModal('help')
     },
+    { 
+      id: 5, 
+      title: 'Logout', 
+      icon: 'log-out-outline',
+      onPress: handleLogoutPress,
+      isDestructive: true
+    }
   ];
 
   const renderMainContent = () => (
@@ -175,14 +268,30 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
             }]}>{userInfo.email}</Text>
           </View>
         </View>
-        <View style={[styles.statsContainer, { backgroundColor: theme.background }]}>
-          <Ionicons name="heart" size={20} color="#ED1D24" />
-          <Text style={[styles.statsText, { 
-            color: theme.text,
-            fontSize: fontSizes.sm 
-          }]}>
-            {userInfo.favoriteHeroes} Favorite Heroes
-          </Text>
+
+        <View style={styles.statsRow}>
+          <View style={[styles.statsContainer, { backgroundColor: theme.background }]}>
+            <Ionicons name="heart" size={20} color="#ED1D24" />
+            <Text style={[styles.statsText, { 
+              color: theme.text,
+              fontSize: fontSizes.sm 
+            }]}>
+              {userInfo.favoriteHeroes} Favorites
+            </Text>
+          </View>
+
+          <View style={[styles.statsContainer, { backgroundColor: theme.background }]}>
+            <Ionicons name="calendar" size={20} color="#4CAF50" />
+            <Text style={[styles.statsText, { 
+              color: theme.text,
+              fontSize: fontSizes.sm 
+            }]}>
+              {userInfo.createdAt ? 
+                `Joined ${new Date(userInfo.createdAt).toLocaleDateString()}` :
+                'New Member'
+              }
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -195,6 +304,7 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
             onPress={item.onPress}
             theme={theme}
             fontSizes={fontSizes}
+            isDestructive={item.isDestructive}
           />
         ))}
       </View>
@@ -225,7 +335,6 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
               onChangeText={setEditedName}
               placeholder="Enter your name"
               placeholderTextColor={theme.textSecondary}
-              maxLength={50}
             />
           </View>
           <View style={styles.inputContainer}>
@@ -313,8 +422,7 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
           <View style={styles.notificationTypes}>
             <Text style={[styles.sectionTitle, { 
               color: theme.text,
-              fontSize: fontSizes.md,
-              marginBottom: 15
+              fontSize: fontSizes.md 
             }]}>Notification Types</Text>
 
             <View style={styles.settingItem}>
@@ -351,7 +459,7 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
                 }]}>
                   App updates and improvements
                 </Text>
-              </View>
+                </View>
               <Switch
                 value={notifications.updates}
                 onValueChange={() => handleNotificationToggle('updates')}
@@ -534,7 +642,14 @@ const styles = StyleSheet.create({
   email: {
     fontFamily: 'PoppinsRegular',
   },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 15,
+    gap: 10,
+  },
   statsContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
@@ -562,6 +677,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     borderRadius: 12,
+    marginBottom: 8,
   },
   menuIconContainer: {
     width: 40,
@@ -686,6 +802,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: 'PoppinsRegular',
     fontWeight: '600',
+    marginBottom: 15,
   }
 });
 

@@ -1,39 +1,65 @@
 {
   "expo": {
     "name": "MarvelVerse",
-    "slug": "MarvelVerse",
+    "slug": "marvelverse",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/placeholder.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "scheme": "marvelverse",
+    "splash": {
+      "image": "./assets/placeholder.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ED1D24"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.marvelverse",
+      "buildNumber": "1.0.0",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "marvelverse"
+            ]
+          }
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/placeholder.png",
+        "backgroundColor": "#ED1D24"
+      },
+      "package": "com.yourcompany.marvelverse",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "plugins": [
       [
         "expo-font",
         {
           "fonts": [
             "./assets/fonts/Poppins-Regular.ttf",
+            "./assets/fonts/Poppins-Bold.ttf",
             "./assets/fonts/Marvel-Regular.ttf"
           ]
         }
       ]
     ],
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/placeholder.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
       }
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     }
   }
 }

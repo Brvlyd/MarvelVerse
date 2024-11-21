@@ -149,7 +149,7 @@ const featuredHeroes = [
   }
 ];
 
-export default function MarvelScreen() {
+export default function MarvelScreen({ onLogout }) {
   const { theme, fontSizes } = useTheme();
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -375,7 +375,7 @@ export default function MarvelScreen() {
     </ScrollView>
   );
 
-  const renderContent = () => {
+const renderContent = () => {
     if (selectedCharacter) {
       return (
         <DetailScreen
@@ -393,9 +393,12 @@ export default function MarvelScreen() {
           category={selectedCategory}
           onClose={() => setSelectedCategory(null)}
           onCharacterPress={handleCharacterPress}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
         />
       );
     }
+
 
     switch (activeTab) {
       case 'home':
@@ -449,7 +452,10 @@ export default function MarvelScreen() {
               contentContainerStyle={styles.screenPadding}
               showsVerticalScrollIndicator={false}
             >
-              <ProfileScreen favoriteCount={favorites.length} />
+            <ProfileScreen 
+              favoriteCount={favorites.length} 
+              onLogout={onLogout}
+            />
             </ScrollView>
           </View>
         );

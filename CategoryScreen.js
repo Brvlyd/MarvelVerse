@@ -14,7 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import CharacterCard from './Card';
 import { useTheme } from './ThemeContext';
 
-const CategoryScreen = ({ category, onClose, onCharacterPress }) => {
+const CategoryScreen = ({ 
+  category, 
+  onClose, 
+  onCharacterPress, 
+  favorites = [], 
+  onToggleFavorite 
+}) => {
   const { theme, fontSizes } = useTheme();
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -302,14 +308,17 @@ const CategoryScreen = ({ category, onClose, onCharacterPress }) => {
     return () => clearTimeout(timer);
   }, [category]);
 
-  const renderCharacterCard = ({ item }) => (
-    <CharacterCard
-      item={item}
-      onPress={onCharacterPress}
-      isFavorite={false}
-      onToggleFavorite={() => {}}
-    />
-  );
+  const renderCharacterCard = ({ item }) => {
+    const isFavorite = favorites.some(fav => fav.id === item.id);
+    return (
+      <CharacterCard
+        item={item}
+        onPress={onCharacterPress}
+        isFavorite={isFavorite}
+        onToggleFavorite={onToggleFavorite}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
