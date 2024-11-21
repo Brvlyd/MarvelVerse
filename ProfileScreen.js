@@ -125,32 +125,6 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
     }
   }, [editedName, editedEmail, favoriteCount]);
 
-  const handleLogout = useCallback(() => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await AsyncStorage.multiRemove([
-                STORAGE_KEYS.USER_INFO, 
-                STORAGE_KEYS.SETTINGS,
-                STORAGE_KEYS.NOTIFICATIONS
-              ]);
-            } catch (error) {
-              console.error('Error during logout:', error);
-            }
-          },
-        },
-      ],
-      { cancelable: true }
-    );
-  }, []);
-
   const menuItems = [
     { 
       id: 1, 
@@ -224,15 +198,6 @@ const ProfileScreen = ({ favoriteCount = 0 }) => {
           />
         ))}
       </View>
-
-      <TouchableOpacity 
-        style={[styles.logoutButton, { backgroundColor: '#FFEBEE' }]}
-        onPress={handleLogout}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="log-out-outline" size={22} color="#ED1D24" />
-        <Text style={[styles.logoutText, { fontSize: fontSizes.md }]}>Log Out</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 
@@ -610,21 +575,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'PoppinsRegular',
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 20,
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 30,
-  },
-  logoutText: {
-    color: '#ED1D24',
-    fontWeight: '600',
-    fontFamily: 'Poppins',
-    marginLeft: 8,
-  },
   modalForm: {
     padding: 20,
   },
@@ -738,6 +688,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   }
 });
-
 
 export default ProfileScreen;
