@@ -7,8 +7,10 @@ import {
   Platform,
   Dimensions,
   ScrollView,
-  Animated
+  Animated,
+  Text
 } from 'react-native';
+import { useTheme } from '../ThemeContext';
 
 const { height } = Dimensions.get('window');
 
@@ -17,11 +19,11 @@ const BaseModal = ({
   onClose, 
   children, 
   title,
-  position = 'bottom', // 'bottom', 'right', 'center'
+  position = 'bottom',
   useScrollView = true,
   animationType = 'slide'
 }) => {
-  // Animation value for custom animations
+  const { theme, fontSizes } = useTheme();
   const [slideAnimation] = React.useState(new Animated.Value(0));
 
   React.useEffect(() => {
@@ -70,19 +72,32 @@ const BaseModal = ({
   };
 
   const getContainerStyle = () => {
+    const baseStyle = [
+      styles.modalContent, 
+      { backgroundColor: theme.surface }
+    ];
+
     switch (position) {
       case 'right':
-        return [styles.modalContent, styles.rightModal];
+        return [...baseStyle, styles.rightModal];
       case 'bottom':
-        return [styles.modalContent, styles.bottomModal];
+        return [...baseStyle, styles.bottomModal];
       default:
-        return [styles.modalContent, styles.centerModal];
+        return [...baseStyle, styles.centerModal];
     }
   };
 
   const renderContent = () => {
     const content = (
       <>
+        {title && (
+          <View style={[styles.titleContainer, { borderBottomColor: theme.border }]}>
+            <Text style={[styles.titleText, { 
+              color: theme.text,
+              fontSize: fontSizes.lg 
+            }]}>{title}</Text>
+          </View>
+        )}
         {children}
       </>
     );
@@ -101,7 +116,6 @@ const BaseModal = ({
     return content;
   };
 
-  // Use Modal for standard modal behavior
   if (animationType === 'slide' || animationType === 'fade') {
     return (
       <Modal
@@ -122,7 +136,6 @@ const BaseModal = ({
     );
   }
 
-  // Use custom animation for special cases
   if (!visible) return null;
   
   return (
@@ -158,7 +171,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
     maxHeight: height * 0.8,
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
@@ -184,7 +196,16 @@ const styles = StyleSheet.create({
   centerModal: {
     margin: 20,
     borderRadius: 25,
-  }
+  },
+  titleContainer: {
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  titleText: {
+    fontFamily: 'Poppins',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });
 
 export default BaseModal;

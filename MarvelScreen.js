@@ -21,7 +21,9 @@ import CharacterCard from './Card';
 import ProfileScreen from './ProfileScreen';
 import DetailScreen from './DetailScreen';
 import SearchScreen from './SearchScreen';
+import CategoryScreen from './CategoryScreen';
 import { NotificationModal } from './modals';
+import { useTheme } from './ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -29,37 +31,126 @@ const publicKey = '2f1fd8ca50b11bb6eed11409974d9cfe';
 const hash = 'd3ee58dc3fc006a3051b143c3eea0144';
 const timestamp = 1;
 
-// Categories for Home screen
 const categories = [
-  { id: 'popular', name: 'Popular', icon: 'star' },
-  { id: 'avengers', name: 'Avengers', icon: 'shield' },
-  { id: 'xmen', name: 'X-Men', icon: 'flash' },
-  { id: 'villains', name: 'Villains', icon: 'skull' },
+  { id: 'popular', name: 'Popular', icon: 'star', description: 'The most beloved characters in the Marvel Universe' },
+  { id: 'avengers', name: 'Avengers', icon: 'shield', description: 'Earth\'s Mightiest Heroes, united against common threats' },
+  { id: 'xmen', name: 'X-Men', icon: 'flash', description: 'Mutant heroes fighting for peaceful coexistence' },
+  { id: 'villains', name: 'Villains', icon: 'skull', description: 'The greatest threats to the Marvel Universe' },
 ];
 
-// Featured heroes for Home screen carousel
 const featuredHeroes = [
   { 
-    id: 1, 
+    id: 1009368,
     name: 'Iron Man', 
     type: 'Avenger',
-    image: require('./assets/ironman.jpeg')
+    description: 'Genius inventor Tony Stark creates high-tech armor to become Iron Man, Earth\'s greatest defender.',
+    image: require('./assets/ironman.jpeg'),
+    thumbnail: {
+      path: 'http://i.annihil.us/u/prod/marvel/i/mg/9/c0/527bb7b37ff55',
+      extension: 'jpg'
+    },
+    comics: {
+      items: [
+        { name: 'Iron Man: Extremis' },
+        { name: 'Civil War' },
+        { name: 'Invincible Iron Man' }
+      ]
+    },
+    series: {
+      items: [
+        { name: 'Iron Man (2020)' },
+        { name: 'Avengers' },
+        { name: 'Tony Stark: Iron Man' }
+      ]
+    },
+    stories: {
+      items: [
+        { name: 'Origin of Iron Man' },
+        { name: 'The Armor Wars' },
+        { name: 'Demon in a Bottle' }
+      ]
+    },
+    urls: [
+      { type: 'detail', url: 'http://marvel.com/characters/29/iron_man' },
+      { type: 'wiki', url: 'http://marvel.com/universe/Iron_Man' }
+    ]
   },
   { 
-    id: 2, 
+    id: 1009610,
     name: 'Spider-Man', 
-    type: 'Street Level', 
-    image: require('./assets/spider-man.jpeg')
+    type: 'Street Level',
+    description: 'Bitten by a radioactive spider, Peter Parker fights crime with spider-like abilities as Spider-Man.',
+    image: require('./assets/spider-man.jpeg'),
+    thumbnail: {
+      path: 'http://i.annihil.us/u/prod/marvel/i/mg/3/50/526548a343e4b',
+      extension: 'jpg'
+    },
+    comics: {
+      items: [
+        { name: 'Amazing Spider-Man' },
+        { name: 'Ultimate Spider-Man' },
+        { name: 'Spectacular Spider-Man' }
+      ]
+    },
+    series: {
+      items: [
+        { name: 'Spider-Man (2022)' },
+        { name: 'Friendly Neighborhood Spider-Man' },
+        { name: 'Web of Spider-Man' }
+      ]
+    },
+    stories: {
+      items: [
+        { name: 'With Great Power' },
+        { name: 'The Night Gwen Stacy Died' },
+        { name: 'Kraven\'s Last Hunt' }
+      ]
+    },
+    urls: [
+      { type: 'detail', url: 'http://marvel.com/characters/54/spider-man' },
+      { type: 'wiki', url: 'http://marvel.com/universe/Spider-Man_(Peter_Parker)' }
+    ]
   },
   { 
-    id: 3, 
+    id: 1009664,
     name: 'Thor', 
     type: 'Cosmic',
-    image: require('./assets/thor.jpeg')
-  },
+    description: 'Thor Odinson wields his mighty hammer Mjolnir as the God of Thunder and protector of both Asgard and Earth.',
+    image: require('./assets/thor.jpeg'),
+    thumbnail: {
+      path: 'http://i.annihil.us/u/prod/marvel/i/mg/d/d0/5269657a74350',
+      extension: 'jpg'
+    },
+    comics: {
+      items: [
+        { name: 'Thor: God of Thunder' },
+        { name: 'Journey into Mystery' },
+        { name: 'The Mighty Thor' }
+      ]
+    },
+    series: {
+      items: [
+        { name: 'Thor (2020)' },
+        { name: 'War of the Realms' },
+        { name: 'Asgardians of the Galaxy' }
+      ]
+    },
+    stories: {
+      items: [
+        { name: 'Tales of Asgard' },
+        { name: 'God Butcher Saga' },
+        { name: 'Ragnarok' }
+      ]
+    },
+    urls: [
+      { type: 'detail', url: 'http://marvel.com/characters/60/thor' },
+      { type: 'wiki', url: 'http://marvel.com/universe/Thor' }
+    ]
+  }
 ];
 
 export default function MarvelScreen() {
+  const { theme, fontSizes } = useTheme();
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -69,6 +160,7 @@ export default function MarvelScreen() {
   const [activeTab, setActiveTab] = useState('home');
   const [favorites, setFavorites] = useState([]);
   const [selectedCharacter, setSelectedCharacter] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
@@ -156,10 +248,12 @@ export default function MarvelScreen() {
   };
 
   const HomeHeader = () => (
-    <View style={styles.homeHeader}>
+    <View style={[styles.homeHeader, { backgroundColor: theme.surface }]}>
       <View style={styles.welcomeContainer}>
-        <Text style={styles.welcomeText}>Welcome Back!</Text>
-        <Text style={styles.dateText}>
+        <Text style={[styles.welcomeText, { color: theme.text, fontSize: fontSizes.lg }]}>
+          Welcome Back!
+        </Text>
+        <Text style={[styles.dateText, { color: theme.textSecondary, fontSize: fontSizes.sm }]}>
           {new Date().toLocaleDateString('en-US', { 
             weekday: 'long', 
             month: 'long', 
@@ -168,10 +262,10 @@ export default function MarvelScreen() {
         </Text>
       </View>
       <TouchableOpacity 
-        style={styles.notificationButton}
+        style={[styles.notificationButton, { backgroundColor: theme.background }]}
         onPress={() => setShowNotifications(true)}
       >
-        <Ionicons name="notifications-outline" size={24} color="#333" />
+        <Ionicons name="notifications-outline" size={24} color={theme.text} />
         <View style={styles.notificationBadge} />
       </TouchableOpacity>
     </View>
@@ -179,7 +273,9 @@ export default function MarvelScreen() {
 
   const CategoryList = () => (
     <View style={styles.categorySection}>
-      <Text style={styles.sectionTitle}>Categories</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text, fontSize: fontSizes.lg }]}>
+        Categories
+      </Text>
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
@@ -188,49 +284,72 @@ export default function MarvelScreen() {
         {categories.map((category) => (
           <TouchableOpacity 
             key={category.id} 
-            style={styles.categoryCard}
+            style={[styles.categoryCard, { backgroundColor: theme.surface }]}
+            onPress={() => setSelectedCategory(category)}
           >
-            <View style={styles.categoryIcon}>
+            <View style={[styles.categoryIcon, { backgroundColor: theme.background }]}>
               <Ionicons name={category.icon} size={24} color="#ED1D24" />
             </View>
-            <Text style={styles.categoryName}>{category.name}</Text>
+            <Text style={[styles.categoryName, { 
+              color: theme.text,
+              fontSize: fontSizes.sm 
+            }]}>{category.name}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
     </View>
   );
 
-  const FeaturedCarousel = () => (
-    <View style={styles.featuredSection}>
-      <Text style={styles.sectionTitle}>Featured Heroes</Text>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.featuredContainer}
-      >
-        {featuredHeroes.map((hero) => (
-          <View key={hero.id} style={styles.featuredCard}>
-            <Image
-              source={hero.image}  // Changed this line
-              style={styles.featuredImage}
-            />
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.8)']}
-              style={styles.featuredGradient}
-            />
-            <View style={styles.featuredInfo}>
-              <Text style={styles.featuredName}>{hero.name}</Text>
-              <Text style={styles.featuredType}>{hero.type}</Text>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-    </View>
-  );
+  const FeaturedCarousel = () => {
+    const handleFeaturePress = (hero) => {
+      setSelectedCharacter(hero);
+    };
+
+    return (
+      <View style={styles.featuredSection}>
+        <Text style={[styles.sectionTitle, { color: theme.text, fontSize: fontSizes.lg }]}>
+          Featured Heroes
+        </Text>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.featuredContainer}
+        >
+          {featuredHeroes.map((hero) => (
+            <TouchableOpacity
+              key={hero.id}
+              style={[styles.featuredCard, { backgroundColor: theme.surface }]}
+              onPress={() => handleFeaturePress(hero)}
+              activeOpacity={0.7}
+            >
+              <Image
+                source={hero.image}
+                style={styles.featuredImage}
+              />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.8)']}
+                style={styles.featuredGradient}
+              />
+              <View style={styles.featuredInfo}>
+                <Text style={[styles.featuredName, { 
+                  color: '#FFFFFF',
+                  fontSize: fontSizes.md 
+                }]}>{hero.name}</Text>
+                <Text style={[styles.featuredType, { 
+                  color: '#FFFFFF',
+                  fontSize: fontSizes.sm 
+                }]}>{hero.type}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
 
   const HomeScreen = ({ characters, renderCharacterCard }) => (
     <ScrollView 
-      style={styles.homeScreen} 
+      style={[styles.homeScreen, { backgroundColor: theme.background }]} 
       showsVerticalScrollIndicator={false}
       contentContainerStyle={[styles.homeContent, styles.screenPadding]}
     >
@@ -240,10 +359,10 @@ export default function MarvelScreen() {
       
       <View style={styles.trendingSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Trending Heroes</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAllButton}>See All</Text>
-          </TouchableOpacity>
+          <Text style={[styles.sectionTitle, { 
+            color: theme.text,
+            fontSize: fontSizes.lg 
+          }]}>Trending Heroes</Text>
         </View>
         <View style={styles.trendingGrid}>
           {characters.slice(0, 6).map((item) => (
@@ -255,14 +374,6 @@ export default function MarvelScreen() {
       </View>
     </ScrollView>
   );
-
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#ED1D24" />
-      </View>
-    );
-  }
 
   const renderContent = () => {
     if (selectedCharacter) {
@@ -276,10 +387,20 @@ export default function MarvelScreen() {
       );
     }
 
+    if (selectedCategory) {
+      return (
+        <CategoryScreen
+          category={selectedCategory}
+          onClose={() => setSelectedCategory(null)}
+          onCharacterPress={handleCharacterPress}
+        />
+      );
+    }
+
     switch (activeTab) {
       case 'home':
         return (
-          <View style={styles.screenContainer}>
+          <View style={[styles.screenContainer, { backgroundColor: theme.background }]}>
             <HomeScreen 
               characters={characters}
               renderCharacterCard={renderCharacterCard}
@@ -288,7 +409,7 @@ export default function MarvelScreen() {
         );
       case 'search':
         return (
-          <View style={styles.screenContainer}>
+          <View style={[styles.screenContainer, { backgroundColor: theme.background }]}>
             <SearchScreen
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
@@ -302,7 +423,7 @@ export default function MarvelScreen() {
         );
       case 'favorites':
         return (
-          <View style={styles.screenContainer}>
+          <View style={[styles.screenContainer, { backgroundColor: theme.background }]}>
             <FlatList
               data={favorites}
               keyExtractor={(item) => item.id.toString()}
@@ -312,7 +433,10 @@ export default function MarvelScreen() {
               renderItem={renderCharacterCard}
               ListEmptyComponent={
                 <View style={styles.noResultsContainer}>
-                  <Text style={styles.noResultsText}>No favorites yet</Text>
+                  <Text style={[styles.noResultsText, { 
+                    color: theme.text,
+                    fontSize: fontSizes.md 
+                  }]}>No favorites yet</Text>
                 </View>
               }
             />
@@ -320,12 +444,12 @@ export default function MarvelScreen() {
         );
       case 'profile':
         return (
-          <View style={styles.screenContainer}>
+          <View style={[styles.screenContainer, { backgroundColor: theme.background }]}>
             <ScrollView 
               contentContainerStyle={styles.screenPadding}
               showsVerticalScrollIndicator={false}
             >
-              <ProfileScreen />
+              <ProfileScreen favoriteCount={favorites.length} />
             </ScrollView>
           </View>
         );
@@ -334,7 +458,14 @@ export default function MarvelScreen() {
     }
   };
 
-  // Helper function to get the correct icon name for navigation tabs
+  if (!fontsLoaded) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color="#ED1D24" />
+      </View>
+    );
+  }
+
   const getIconName = (tabName) => {
     const icons = {
       home: activeTab === tabName ? 'home' : 'home-outline',
@@ -346,20 +477,23 @@ export default function MarvelScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {!selectedCharacter && (
-        <View style={styles.headerContainer}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      {!selectedCharacter && !selectedCategory && (
+        <View style={[styles.headerContainer, { backgroundColor: theme.surface }]}>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.headerText}>MARVEL</Text>
+            <Text style={[styles.headerText, { fontSize: fontSizes.xxl }]}>MARVEL</Text>
           </View>
-          <Text style={styles.headerSubText}>Universe</Text>
+          <Text style={[styles.headerSubText, { 
+            color: theme.text,
+            fontSize: fontSizes.lg 
+          }]}>Universe</Text>
         </View>
       )}
       
       {renderContent()}
       
-      {!selectedCharacter && (
-        <View style={styles.navbar}>
+      {!selectedCharacter && !selectedCategory && (
+        <View style={[styles.navbar, { backgroundColor: theme.surface }]}>
           {['home', 'search', 'favorites', 'profile'].map((tab) => (
             <TouchableOpacity
               key={tab}
@@ -368,20 +502,25 @@ export default function MarvelScreen() {
             >
               <View style={[
                 styles.tabContent,
-                activeTab === tab && styles.activeTabContent
+                activeTab === tab && [
+                  styles.activeTabContent,
+                  { backgroundColor: theme.background }
+                ]
               ]}>
                 <View style={[
                   styles.iconContainer,
-                  activeTab === tab && styles.activeIconContainer
+                  activeTab === tab && styles.activeIconContainer,
+                  { backgroundColor: activeTab === tab ? theme.surface : 'transparent' }
                 ]}>
                   <Ionicons
                     name={getIconName(tab)}
                     size={24}
-                    color={activeTab === tab ? '#ED1D24' : '#666'}
+                    color={activeTab === tab ? '#ED1D24' : theme.textSecondary}
                   />
                 </View>
                 <Text style={[
                   styles.tabLabel,
+                  { color: theme.textSecondary },
                   activeTab === tab && styles.activeTabLabel
                 ]}>
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -401,10 +540,8 @@ export default function MarvelScreen() {
 }
 
 const styles = StyleSheet.create({
-  // ... Styles tetap sama seperti sebelumnya ...
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   screenContainer: {
@@ -416,7 +553,6 @@ const styles = StyleSheet.create({
   headerContainer: {
     padding: 20,
     paddingTop: Platform.OS === 'android' ? 40 : 20,
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     shadowColor: "#000",
     shadowOffset: {
@@ -436,19 +572,15 @@ const styles = StyleSheet.create({
   },
   headerText: {
     color: '#FFFFFF',
-    fontSize: 60,
     fontFamily: 'MarvelRegular',
     letterSpacing: -1,
   },
   headerSubText: {
-    color: '#333',
-    fontSize: 20,
     fontFamily: 'Poppins',
     marginTop: 0,
   },
   homeScreen: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   homeContent: {
     paddingBottom: Platform.OS === 'ios' ? 90 : 80,
@@ -458,7 +590,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#FFFFFF',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     shadowColor: "#000",
@@ -474,14 +605,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   welcomeText: {
-    fontSize: 24,
     fontWeight: '700',
-    color: '#333',
     fontFamily: 'Poppins',
   },
   dateText: {
-    fontSize: 14,
-    color: '#666',
     fontFamily: 'PoppinsRegular',
     marginTop: 4,
   },
@@ -489,7 +616,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -509,9 +635,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sectionTitle: {
-    fontSize: 20,
     fontWeight: '700',
-    color: '#333',
     fontFamily: 'Poppins',
     marginBottom: 15,
   },
@@ -521,7 +645,6 @@ const styles = StyleSheet.create({
   categoryCard: {
     width: 100,
     height: 100,
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     marginRight: 15,
     padding: 15,
@@ -540,14 +663,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFEBEE',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   categoryName: {
-    fontSize: 14,
-    color: '#333',
     fontFamily: 'PoppinsRegular',
     textAlign: 'center',
   },
@@ -560,7 +680,6 @@ const styles = StyleSheet.create({
   featuredCard: {
     width: width * 0.7,
     height: 200,
-    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     marginRight: 15,
     overflow: 'hidden',
@@ -594,14 +713,10 @@ const styles = StyleSheet.create({
     padding: 15,
   },
   featuredName: {
-    fontSize: 18,
-    color: '#FFFFFF',
     fontFamily: 'Poppins',
     fontWeight: '700',
   },
   featuredType: {
-    fontSize: 14,
-    color: '#FFFFFF',
     fontFamily: 'PoppinsRegular',
     opacity: 0.8,
   },
@@ -614,11 +729,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 15,
   },
-  seeAllButton: {
-    color: '#ED1D24',
-    fontSize: 14,
-    fontFamily: 'Poppins',
-  },
   trendingGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -630,7 +740,6 @@ const styles = StyleSheet.create({
   },
   navbar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     paddingVertical: 10,
     paddingBottom: Platform.OS === 'ios' ? 25 : 10,
     borderTopLeftRadius: 30,
@@ -658,7 +767,6 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   activeTabContent: {
-    backgroundColor: '#FFEBEE',
     borderRadius: 20,
     paddingHorizontal: 12,
   },
@@ -670,7 +778,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   activeIconContainer: {
-    backgroundColor: '#FFFFFF',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -682,7 +789,6 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 12,
-    color: '#666',
     fontFamily: 'PoppinsRegular',
     marginTop: 4,
   },
@@ -702,7 +808,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
   },
   noResultsContainer: {
     flex: 1,
@@ -712,7 +817,6 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 16,
-    color: '#666',
     fontFamily: 'PoppinsRegular',
     textAlign: 'center',
   },

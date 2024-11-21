@@ -15,51 +15,71 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BaseModal } from './modals';
+import { useTheme } from './ThemeContext';
 
 const STORAGE_KEYS = {
   USER_INFO: '@user_info',
-  SETTINGS: '@settings'
+  SETTINGS: '@settings',
+  NOTIFICATIONS: '@notifications'
 };
 
 const MODAL_POSITIONS = {
   BOTTOM: 'bottom'
 };
 
-const MenuItem = ({ title, icon, onPress }) => (
+const MenuItem = ({ title, icon, onPress, theme, fontSizes }) => (
   <TouchableOpacity 
-    style={styles.menuItem} 
+    style={[styles.menuItem, { backgroundColor: theme.surface }]} 
     onPress={onPress}
     activeOpacity={0.7}
   >
-    <View style={styles.menuIconContainer}>
-      <Ionicons name={icon} size={22} color="#666" />
+    <View style={[styles.menuIconContainer, { backgroundColor: theme.background }]}>
+      <Ionicons name={icon} size={22} color={theme.textSecondary} />
     </View>
-    <Text style={styles.menuText}>{title}</Text>
-    <Ionicons name="chevron-forward" size={20} color="#666" />
+    <Text style={[styles.menuText, { 
+      color: theme.text,
+      fontSize: fontSizes.md 
+    }]}>{title}</Text>
+    <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
   </TouchableOpacity>
 );
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ favoriteCount = 0 }) => {
+  const { theme, fontSizes, isDarkMode, fontSize, toggleDarkMode, changeFontSize } = useTheme();
+  
   const [userInfo, setUserInfo] = useState({
     name: "Bravely Dirgayuska",
     email: "bravelydirgayuska@gmail.com",
-    favoriteHeroes: 12,
+    favoriteHeroes: favoriteCount,
   });
 
   const [editedName, setEditedName] = useState(userInfo.name);
   const [editedEmail, setEditedEmail] = useState(userInfo.email);
   const [activeModal, setActiveModal] = useState(null);
-
-  const [settings, setSettings] = useState({
-    notifications: {
-      pushEnabled: true,
-      emailEnabled: false,
-    },
-    appearance: {
-      darkMode: false,
-      fontSize: 'medium',
-    }
+  const [notifications, setNotifications] = useState({
+    pushEnabled: true,
+    emailEnabled: false,
+    newHeroes: true,
+    updates: true,
+    newsletters: false
   });
+
+  const handleNotificationToggle = useCallback((key) => {
+    setNotifications(prev => {
+      const newSettings = {
+        ...prev,
+        [key]: !prev[key]
+      };
+      
+      try {
+        AsyncStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(newSettings));
+      } catch (error) {
+        console.error('Error saving notification settings:', error);
+      }
+      
+      return newSettings;
+    });
+  }, []);
 
   const handleLinkPress = useCallback(async (url) => {
     if (!url) return;
@@ -98,34 +118,12 @@ const ProfileScreen = () => {
       AsyncStorage.setItem(STORAGE_KEYS.USER_INFO, JSON.stringify({
         name: editedName.trim(),
         email: editedEmail.trim(),
-        favoriteHeroes: userInfo.favoriteHeroes
+        favoriteHeroes: favoriteCount
       }));
     } catch (error) {
       console.error('Error saving user info:', error);
     }
-  }, [editedName, editedEmail, userInfo.favoriteHeroes]);
-
-  const handleUpdateSettings = useCallback((type, key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [type]: {
-        ...prev[type],
-        [key]: value
-      }
-    }));
-
-    try {
-      AsyncStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify({
-        ...settings,
-        [type]: {
-          ...settings[type],
-          [key]: value
-        }
-      }));
-    } catch (error) {
-      console.error('Error saving settings:', error);
-    }
-  }, [settings]);
+  }, [editedName, editedEmail, favoriteCount]);
 
   const handleLogout = useCallback(() => {
     Alert.alert(
@@ -140,7 +138,8 @@ const ProfileScreen = () => {
             try {
               await AsyncStorage.multiRemove([
                 STORAGE_KEYS.USER_INFO, 
-                STORAGE_KEYS.SETTINGS
+                STORAGE_KEYS.SETTINGS,
+                STORAGE_KEYS.NOTIFICATIONS
               ]);
             } catch (error) {
               console.error('Error during logout:', error);
@@ -181,47 +180,58 @@ const ProfileScreen = () => {
 
   const renderMainContent = () => (
     <ScrollView 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       showsVerticalScrollIndicator={false}
       bounces={true}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: theme.surface }]}>
         <View style={styles.profileContainer}>
           <Image
             source={require('./assets/profile.jpg')}
             style={styles.profileImage}
           />
           <View style={styles.profileInfo}>
-            <Text style={styles.name}>{userInfo.name}</Text>
-            <Text style={styles.email}>{userInfo.email}</Text>
+            <Text style={[styles.name, { 
+              color: theme.text,
+              fontSize: fontSizes.lg 
+            }]}>{userInfo.name}</Text>
+            <Text style={[styles.email, { 
+              color: theme.textSecondary,
+              fontSize: fontSizes.sm 
+            }]}>{userInfo.email}</Text>
           </View>
         </View>
-        <View style={styles.statsContainer}>
+        <View style={[styles.statsContainer, { backgroundColor: theme.background }]}>
           <Ionicons name="heart" size={20} color="#ED1D24" />
-          <Text style={styles.statsText}>
+          <Text style={[styles.statsText, { 
+            color: theme.text,
+            fontSize: fontSizes.sm 
+          }]}>
             {userInfo.favoriteHeroes} Favorite Heroes
           </Text>
         </View>
       </View>
 
-      <View style={styles.menuContainer}>
+      <View style={[styles.menuContainer, { backgroundColor: theme.surface }]}>
         {menuItems.map((item) => (
           <MenuItem 
             key={item.id} 
             title={item.title} 
             icon={item.icon}
             onPress={item.onPress}
+            theme={theme}
+            fontSizes={fontSizes}
           />
         ))}
       </View>
 
       <TouchableOpacity 
-        style={styles.logoutButton}
+        style={[styles.logoutButton, { backgroundColor: '#FFEBEE' }]}
         onPress={handleLogout}
         activeOpacity={0.7}
       >
         <Ionicons name="log-out-outline" size={22} color="#ED1D24" />
-        <Text style={styles.logoutText}>Log Out</Text>
+        <Text style={[styles.logoutText, { fontSize: fontSizes.md }]}>Log Out</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -234,24 +244,40 @@ const ProfileScreen = () => {
         position={MODAL_POSITIONS.BOTTOM}
         title="Edit Profile"
       >
-        <View style={styles.modalForm}>
+        <View style={[styles.modalForm, { backgroundColor: theme.surface }]}>
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Name</Text>
+            <Text style={[styles.inputLabel, { 
+              color: theme.textSecondary,
+              fontSize: fontSizes.sm 
+            }]}>Name</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { 
+                backgroundColor: theme.background,
+                color: theme.text,
+                fontSize: fontSizes.md 
+              }]}
               value={editedName}
               onChangeText={setEditedName}
               placeholder="Enter your name"
+              placeholderTextColor={theme.textSecondary}
               maxLength={50}
             />
           </View>
           <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Email</Text>
+            <Text style={[styles.inputLabel, { 
+              color: theme.textSecondary,
+              fontSize: fontSizes.sm 
+            }]}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { 
+                backgroundColor: theme.background,
+                color: theme.text,
+                fontSize: fontSizes.md 
+              }]}
               value={editedEmail}
               onChangeText={setEditedEmail}
               placeholder="Enter your email"
+              placeholderTextColor={theme.textSecondary}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -261,7 +287,9 @@ const ProfileScreen = () => {
             style={styles.submitButton}
             onPress={handleUpdateProfile}
           >
-            <Text style={styles.submitButtonText}>Save Changes</Text>
+            <Text style={[styles.submitButtonText, { fontSize: fontSizes.md }]}>
+              Save Changes
+            </Text>
           </TouchableOpacity>
         </View>
       </BaseModal>
@@ -272,40 +300,123 @@ const ProfileScreen = () => {
         position={MODAL_POSITIONS.BOTTOM}
         title="Notifications"
       >
-        <View style={styles.modalForm}>
+        <View style={[styles.modalForm, { backgroundColor: theme.surface }]}>
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Push Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Receive push notifications for updates
+              <Text style={[styles.settingTitle, { 
+                color: theme.text,
+                fontSize: fontSizes.md 
+              }]}>Push Notifications</Text>
+              <Text style={[styles.settingDescription, { 
+                color: theme.textSecondary,
+                fontSize: fontSizes.sm 
+              }]}>
+                Receive push notifications on your device
               </Text>
             </View>
             <Switch
-              value={settings.notifications.pushEnabled}
-              onValueChange={(value) => 
-                handleUpdateSettings('notifications', 'pushEnabled', value)
-              }
+              value={notifications.pushEnabled}
+              onValueChange={() => handleNotificationToggle('pushEnabled')}
               trackColor={{ false: "#767577", true: "#ED1D24" }}
               thumbColor={Platform.OS === 'ios' ? "#FFFFFF" : 
-                settings.notifications.pushEnabled ? "#FFFFFF" : "#f4f3f4"}
+                notifications.pushEnabled ? "#FFFFFF" : "#f4f3f4"}
             />
           </View>
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Email Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Receive email updates and newsletters
+              <Text style={[styles.settingTitle, { 
+                color: theme.text,
+                fontSize: fontSizes.md 
+              }]}>Email Notifications</Text>
+              <Text style={[styles.settingDescription, { 
+                color: theme.textSecondary,
+                fontSize: fontSizes.sm 
+              }]}>
+                Receive notifications via email
               </Text>
             </View>
             <Switch
-              value={settings.notifications.emailEnabled}
-              onValueChange={(value) => 
-                handleUpdateSettings('notifications', 'emailEnabled', value)
-              }
+              value={notifications.emailEnabled}
+              onValueChange={() => handleNotificationToggle('emailEnabled')}
               trackColor={{ false: "#767577", true: "#ED1D24" }}
               thumbColor={Platform.OS === 'ios' ? "#FFFFFF" : 
-                settings.notifications.emailEnabled ? "#FFFFFF" : "#f4f3f4"}
+                notifications.emailEnabled ? "#FFFFFF" : "#f4f3f4"}
             />
+          </View>
+
+          <View style={styles.notificationTypes}>
+            <Text style={[styles.sectionTitle, { 
+              color: theme.text,
+              fontSize: fontSizes.md,
+              marginBottom: 15
+            }]}>Notification Types</Text>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { 
+                  color: theme.text,
+                  fontSize: fontSizes.md 
+                }]}>New Heroes</Text>
+                <Text style={[styles.settingDescription, { 
+                  color: theme.textSecondary,
+                  fontSize: fontSizes.sm 
+                }]}>
+                  When new heroes are added
+                </Text>
+              </View>
+              <Switch
+                value={notifications.newHeroes}
+                onValueChange={() => handleNotificationToggle('newHeroes')}
+                trackColor={{ false: "#767577", true: "#ED1D24" }}
+                thumbColor={Platform.OS === 'ios' ? "#FFFFFF" : 
+                  notifications.newHeroes ? "#FFFFFF" : "#f4f3f4"}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { 
+                  color: theme.text,
+                  fontSize: fontSizes.md 
+                }]}>Updates</Text>
+                <Text style={[styles.settingDescription, { 
+                  color: theme.textSecondary,
+                  fontSize: fontSizes.sm 
+                }]}>
+                  App updates and improvements
+                </Text>
+              </View>
+              <Switch
+                value={notifications.updates}
+                onValueChange={() => handleNotificationToggle('updates')}
+                trackColor={{ false: "#767577", true: "#ED1D24" }}
+                thumbColor={Platform.OS === 'ios' ? "#FFFFFF" : 
+                  notifications.updates ? "#FFFFFF" : "#f4f3f4"}
+              />
+            </View>
+
+            <View style={styles.settingItem}>
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingTitle, { 
+                  color: theme.text,
+                  fontSize: fontSizes.md 
+                }]}>Newsletters</Text>
+                <Text style={[styles.settingDescription, { 
+                  color: theme.textSecondary,
+                  fontSize: fontSizes.sm 
+                }]}>
+                  Marvel news and updates
+                </Text>
+              </View>
+              <Switch
+                value={notifications.newsletters}
+                onValueChange={() => handleNotificationToggle('newsletters')}
+                trackColor={{ false: "#767577", true: "#ED1D24" }}
+                thumbColor={Platform.OS === 'ios' ? "#FFFFFF" : 
+                  notifications.newsletters ? "#FFFFFF" : "#f4f3f4"}
+              />
+            </View>
           </View>
         </View>
       </BaseModal>
@@ -316,39 +427,48 @@ const ProfileScreen = () => {
         position={MODAL_POSITIONS.BOTTOM}
         title="Appearance"
       >
-        <View style={styles.modalForm}>
+        <View style={[styles.modalForm, { backgroundColor: theme.surface }]}>
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Dark Mode</Text>
-              <Text style={styles.settingDescription}>
+              <Text style={[styles.settingTitle, { 
+                color: theme.text,
+                fontSize: fontSizes.md 
+              }]}>Dark Mode</Text>
+              <Text style={[styles.settingDescription, { 
+                color: theme.textSecondary,
+                fontSize: fontSizes.sm 
+              }]}>
                 Switch between light and dark theme
               </Text>
             </View>
             <Switch
-              value={settings.appearance.darkMode}
-              onValueChange={(value) => 
-                handleUpdateSettings('appearance', 'darkMode', value)
-              }
+              value={isDarkMode}
+              onValueChange={toggleDarkMode}
               trackColor={{ false: "#767577", true: "#ED1D24" }}
               thumbColor={Platform.OS === 'ios' ? "#FFFFFF" : 
-                settings.appearance.darkMode ? "#FFFFFF" : "#f4f3f4"}
+                isDarkMode ? "#FFFFFF" : "#f4f3f4"}
             />
           </View>
           <View style={styles.fontSizeSelector}>
-            <Text style={styles.settingTitle}>Font Size</Text>
+            <Text style={[styles.settingTitle, { 
+              color: theme.text,
+              fontSize: fontSizes.md 
+            }]}>Font Size</Text>
             <View style={styles.fontSizeOptions}>
               {['small', 'medium', 'large'].map((size) => (
                 <TouchableOpacity
                   key={size}
                   style={[
                     styles.fontSizeOption,
-                    settings.appearance.fontSize === size && styles.selectedFontSize
+                    { backgroundColor: theme.background },
+                    fontSize === size && styles.selectedFontSize
                   ]}
-                  onPress={() => handleUpdateSettings('appearance', 'fontSize', size)}
+                  onPress={() => changeFontSize(size)}
                 >
                   <Text style={[
                     styles.fontSizeText,
-                    settings.appearance.fontSize === size && styles.selectedFontSizeText
+                    { color: theme.text },
+                    fontSize === size && styles.selectedFontSizeText
                   ]}>
                     {size.charAt(0).toUpperCase() + size.slice(1)}
                   </Text>
@@ -365,74 +485,35 @@ const ProfileScreen = () => {
         position={MODAL_POSITIONS.BOTTOM}
         title="Help & Support"
       >
-        <View style={styles.modalForm}>
+        <View style={[styles.modalForm, { backgroundColor: theme.surface }]}>
           <TouchableOpacity 
-            style={styles.helpItem}
+            style={[styles.helpItem, { borderBottomColor: theme.border }]}
             onPress={() => handleLinkPress('https://developer.marvel.com/documentation/getting_started')}
           >
-            <Ionicons name="book-outline" size={24} color="#333" />
+            <Ionicons name="book-outline" size={24} color={theme.text} />
             <View style={styles.helpItemContent}>
-              <Text style={styles.helpItemTitle}>Documentation</Text>
-              <Text style={styles.helpItemDescription}>Learn how to use Marvel API</Text>
+              <Text style={[styles.helpItemTitle, { 
+                color: theme.text,
+                fontSize: fontSizes.md 
+              }]}>Documentation</Text>
+              <Text style={[styles.helpItemDescription, { 
+                color: theme.textSecondary,
+                fontSize: fontSizes.sm 
+              }]}>Learn how to use Marvel API</Text>
             </View>
-            <Ionicons name="open-outline" size={20} color="#666" />
+            <Ionicons name="open-outline" size={20} color={theme.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.helpItem}
-            onPress={() => handleLinkPress('https://developer.marvel.com/docs')}
-          >
-            <Ionicons name="code-slash-outline" size={24} color="#333" />
-            <View style={styles.helpItemContent}>
-              <Text style={styles.helpItemTitle}>API Reference</Text>
-              <Text style={styles.helpItemDescription}>Explore Marvel API endpoints</Text>
-            </View>
-            <Ionicons name="open-outline" size={20} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.helpItem}
-            onPress={() => handleLinkPress('https://developer.marvel.com/forum')}
-          >
-            <Ionicons name="chatbubbles-outline" size={24} color="#333" />
-            <View style={styles.helpItemContent}>
-              <Text style={styles.helpItemTitle}>Developer Forum</Text>
-              <Text style={styles.helpItemDescription}>Join the Marvel developer community</Text>
-            </View>
-            <Ionicons name="open-outline" size={20} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.helpItem}
-            onPress={() => handleLinkPress('https://developer.marvel.com/terms')}
-          >
-            <Ionicons name="document-text-outline" size={24} color="#333" />
-            <View style={styles.helpItemContent}>
-              <Text style={styles.helpItemTitle}>Terms & Conditions</Text>
-              <Text style={styles.helpItemDescription}>Read Marvel API usage terms</Text>
-            </View>
-            <Ionicons name="open-outline" size={20} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.helpItem}
-            onPress={() => handleLinkPress('mailto:support@marvel.com')}
-          >
-            <Ionicons name="mail-outline" size={24} color="#333" />
-            <View style={styles.helpItemContent}>
-              <Text style={styles.helpItemTitle}>Contact Support</Text>
-              <Text style={styles.helpItemDescription}>Email the Marvel support team</Text>
-            </View>
-            <Ionicons name="open-outline" size={20} color="#666" />
-          </TouchableOpacity>
-
-          <View style={styles.marvelCredit}>
+          <View style={[styles.marvelCredit, { borderTopColor: theme.border }]}>
             <Image
               source={require('./assets/placeholder.png')}
               style={styles.marvelLogo}
               resizeMode="contain"
             />
-            <Text style={styles.marvelCreditText}>
+            <Text style={[styles.marvelCreditText, { 
+              color: theme.textSecondary,
+              fontSize: fontSizes.xs 
+            }]}>
               Data provided by Marvel. © 2024 Bravely Co.
             </Text>
           </View>
@@ -442,7 +523,7 @@ const ProfileScreen = () => {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       {renderMainContent()}
       {renderModals()}
     </View>
@@ -452,10 +533,8 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#FFFFFF',
     padding: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
@@ -484,31 +563,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   name: {
-    fontSize: 20,
     fontWeight: '600',
-    color: '#333333',
     fontFamily: 'Poppins',
   },
   email: {
-    fontSize: 14,
-    color: '#666666',
     fontFamily: 'PoppinsRegular',
   },
   statsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFEBEE',
     padding: 12,
     borderRadius: 12,
   },
   statsText: {
-    fontSize: 14,
-    color: '#333333',
     fontFamily: 'PoppinsRegular',
     marginLeft: 8,
   },
   menuContainer: {
-    backgroundColor: '#FFFFFF',
     margin: 20,
     borderRadius: 20,
     padding: 10,
@@ -531,22 +602,18 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
   menuText: {
     flex: 1,
-    fontSize: 16,
-    color: '#333333',
     fontFamily: 'PoppinsRegular',
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFEBEE',
     margin: 20,
     padding: 15,
     borderRadius: 15,
@@ -554,7 +621,6 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     color: '#ED1D24',
-    fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Poppins',
     marginLeft: 8,
@@ -566,17 +632,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 14,
-    color: '#666666',
     marginBottom: 8,
     fontFamily: 'PoppinsRegular',
   },
   input: {
-    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 12,
-    fontSize: 16,
-    color: '#333333',
     fontFamily: 'PoppinsRegular',
   },
   submitButton: {
@@ -588,7 +649,6 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Poppins',
   },
@@ -605,14 +665,10 @@ const styles = StyleSheet.create({
     paddingRight: 15,
   },
   settingTitle: {
-    fontSize: 16,
-    color: '#333333',
     fontFamily: 'PoppinsRegular',
     marginBottom: 4,
   },
   settingDescription: {
-    fontSize: 14,
-    color: '#666666',
     fontFamily: 'PoppinsRegular',
   },
   fontSizeSelector: {
@@ -629,15 +685,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 8,
-    backgroundColor: '#F5F5F5',
     alignItems: 'center',
   },
   selectedFontSize: {
     backgroundColor: '#ED1D24',
   },
   fontSizeText: {
-    fontSize: 14,
-    color: '#333333',
     fontFamily: 'PoppinsRegular',
   },
   selectedFontSizeText: {
@@ -649,7 +702,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
   },
   helpItemContent: {
     flex: 1,
@@ -657,14 +709,10 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   helpItemTitle: {
-    fontSize: 16,
-    color: '#333333',
     fontFamily: 'PoppinsRegular',
     marginBottom: 4,
   },
   helpItemDescription: {
-    fontSize: 14,
-    color: '#666666',
     fontFamily: 'PoppinsRegular',
   },
   marvelCredit: {
@@ -672,7 +720,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 20,
     borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
   },
   marvelLogo: {
     width: 100,
@@ -680,11 +727,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   marvelCreditText: {
-    fontSize: 12,
-    color: '#666666',
     fontFamily: 'PoppinsRegular',
     textAlign: 'center',
   },
+  notificationTypes: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontFamily: 'PoppinsRegular',
+    fontWeight: '600',
+  }
 });
+
 
 export default ProfileScreen;

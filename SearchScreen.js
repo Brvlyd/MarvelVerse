@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -12,31 +12,49 @@ import {
   Dimensions 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from './ThemeContext';
 
 const { width } = Dimensions.get('window');
+const SEARCH_HISTORY_KEY = '@search_history';
+const MAX_HISTORY_ITEMS = 5;
 
-const SearchBar = ({ searchQuery, onChangeText, onClear, onSubmit }) => (
-  <View style={styles.searchContainer}>
-    <View style={styles.searchInputContainer}>
-      <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search Marvel heroes..."
-        placeholderTextColor="#666"
-        value={searchQuery}
-        onChangeText={onChangeText}
-        autoCorrect={false}
-        returnKeyType="search"
-        onSubmitEditing={onSubmit}
-      />
-      {searchQuery !== '' && (
-        <TouchableOpacity style={styles.clearButton} onPress={onClear}>
-          <Ionicons name="close-circle" size={20} color="#666" />
-        </TouchableOpacity>
-      )}
+const SearchBar = ({ searchQuery, onChangeText, onClear, onSubmit }) => {
+  const { theme, fontSizes } = useTheme();
+  return (
+    <View style={[styles.searchContainer, { backgroundColor: theme.surface }]}>
+      <View style={[styles.searchInputContainer, { backgroundColor: theme.background }]}>
+        <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
+        <TextInput
+          style={[styles.searchInput, { 
+            color: theme.text,
+            fontSize: fontSizes.md
+          }]}
+          placeholder="Search Marvel heroes..."
+          placeholderTextColor={theme.textSecondary}
+          value={searchQuery}
+          onChangeText={onChangeText}
+          autoCorrect={false}
+          returnKeyType="search"
+          onSubmitEditing={onSubmit}
+        />
+        {searchQuery !== '' && (
+          <TouchableOpacity style={styles.clearButton} onPress={onClear}>
+            <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
-  </View>
-);
+  );
+};
+
+const trendingSearches = [
+  'Spider-Man', 
+  'Iron Man', 
+  'Thor', 
+  'Hulk', 
+  'Black Widow'
+];
 
 const popularCharacters = {
   'Spider-Man': ['Spider-Man', 'Spider-Man (Miles Morales)', 'Spider-Man (2099)', 'Spider-Man (Ultimate)'],
@@ -49,25 +67,6 @@ const popularCharacters = {
   'Black': ['Black Panther', 'Black Widow', 'Black Cat', 'Black Knight'],
 };
 
-const popularSearches = [
-  'Spider-Man', 
-  'Iron Man', 
-  'Thor', 
-  'Hulk', 
-  'Black Widow',
-  'Captain Marvel',
-  'Doctor Strange',
-  'Black Panther'
-];
-
-const recentSearches = [
-  'Captain America',
-  'Black Panther',
-  'Doctor Strange',
-  'Wolverine',
-  'Deadpool'
-];
-
 const SearchScreen = ({ 
   searchQuery, 
   setSearchQuery, 
@@ -77,36 +76,91 @@ const SearchScreen = ({
   renderCharacterCard,
   handleSearch 
 }) => {
-  const getSearchSuggestions = (query) => {
-    if (!query) return [];
-    
-    query = query.toLowerCase();
-    let suggestions = [];
-    
-    Object.entries(popularCharacters).forEach(([key, variants]) => {
-      if (key.toLowerCase().startsWith(query)) {
-        suggestions.push(...variants);
+  const { theme, fontSizes } = useTheme();
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+
+  useEffect(() => {
+    loadSearchHistory();
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery) {
+      updateSuggestions(searchQuery);
+    } else {
+      setSuggestions([]);
+    }
+  }, [searchQuery]);
+
+  const loadSearchHistory = async () => {
+    try {
+      const history = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
+      if (history) {
+        setSearchHistory(JSON.parse(history));
       }
-    });
-    
-    Object.values(popularCharacters).flat().forEach(character => {
-      if (character.toLowerCase().includes(query) && !suggestions.includes(character)) {
-        suggestions.push(character);
-      }
-    });
-    
-    return [...new Set(suggestions)].slice(0, 5);
+    } catch (error) {
+      console.error('Error loading search history:', error);
+    }
   };
 
-  const handleSuggestionPress = (suggestion) => {
+  const addToSearchHistory = async (query) => {
+    if (!query.trim()) return;
+
+    try {
+      const newHistory = [
+        query,
+        ...searchHistory.filter(item => item !== query)
+      ].slice(0, MAX_HISTORY_ITEMS);
+
+      setSearchHistory(newHistory);
+      await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(newHistory));
+    } catch (error) {
+      console.error('Error saving search history:', error);
+    }
+  };
+
+  const removeFromHistory = async (itemToRemove) => {
+    try {
+      const newHistory = searchHistory.filter(item => item !== itemToRemove);
+      setSearchHistory(newHistory);
+      await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(newHistory));
+    } catch (error) {
+      console.error('Error removing from search history:', error);
+    }
+  };
+
+  const clearSearchHistory = async () => {
+    try {
+      setSearchHistory([]);
+      await AsyncStorage.removeItem(SEARCH_HISTORY_KEY);
+    } catch (error) {
+      console.error('Error clearing search history:', error);
+    }
+  };
+
+  const updateSuggestions = (query) => {
+    query = query.toLowerCase();
+    let newSuggestions = [];
+    
+    Object.entries(popularCharacters).forEach(([key, variants]) => {
+      if (key.toLowerCase().includes(query)) {
+        newSuggestions.push(...variants.filter(variant => 
+          variant.toLowerCase().includes(query)
+        ));
+      }
+    });
+    
+    setSuggestions([...new Set(newSuggestions)].slice(0, 5));
+  };
+
+  const handleSuggestionPress = async (suggestion) => {
     setSearchQuery(suggestion);
+    await addToSearchHistory(suggestion);
     handleSearch(suggestion);
   };
 
-  const suggestions = getSearchSuggestions(searchQuery);
-
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <SearchBar
         searchQuery={searchQuery}
         onChangeText={(text) => {
@@ -116,7 +170,12 @@ const SearchScreen = ({
           }
         }}
         onClear={handleClearSearch}
-        onSubmit={() => handleSearch(searchQuery)}
+        onSubmit={async () => {
+          if (searchQuery.trim()) {
+            await addToSearchHistory(searchQuery.trim());
+            handleSearch(searchQuery);
+          }
+        }}
       />
       
       {searchQuery === '' ? (
@@ -125,87 +184,89 @@ const SearchScreen = ({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.trendingSection}>
-            <Text style={styles.sectionTitle}>Trending Now</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text, fontSize: fontSizes.lg }]}>
+              Trending Now
+            </Text>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.trendingContainer}
             >
-              {popularSearches.slice(0, 5).map((search, index) => (
+              {trendingSearches.map((search, index) => (
                 <TouchableOpacity 
                   key={index}
-                  style={styles.trendingItem}
+                  style={[styles.trendingItem, { backgroundColor: theme.surface }]}
                   onPress={() => handleSuggestionPress(search)}
                 >
                   <View style={styles.trendingNumber}>
-                    <Text style={styles.trendingNumberText}>{index + 1}</Text>
+                    <Text style={[styles.trendingNumberText, { fontSize: fontSizes.sm }]}>
+                      {index + 1}
+                    </Text>
                   </View>
-                  <Text style={styles.trendingText}>{search}</Text>
+                  <Text style={[styles.trendingText, { 
+                    color: theme.text,
+                    fontSize: fontSizes.sm 
+                  }]}>{search}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Popular Searches</Text>
-            <View style={styles.popularTagsContainer}>
-              {popularSearches.map((tag, index) => (
-                <TouchableOpacity 
-                  key={index}
-                  style={styles.popularTag}
-                  onPress={() => handleSuggestionPress(tag)}
-                >
-                  <Text style={styles.popularTagText}>{tag}</Text>
+          {searchHistory.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.text, fontSize: fontSizes.lg }]}>
+                  Recent Searches
+                </Text>
+                <TouchableOpacity onPress={clearSearchHistory}>
+                  <Text style={[styles.clearAllText, { fontSize: fontSizes.sm }]}>Clear All</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Searches</Text>
-              <TouchableOpacity>
-                <Text style={styles.clearAllText}>Clear All</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.recentSearches}>
-              {recentSearches.map((search, index) => (
-                <TouchableOpacity 
-                  key={index}
-                  style={styles.recentSearchItem}
-                  onPress={() => handleSuggestionPress(search)}
-                >
-                  <View style={styles.recentSearchLeft}>
-                    <Ionicons name="time-outline" size={20} color="#666" />
-                    <Text style={styles.recentSearchText}>{search}</Text>
-                  </View>
-                  <TouchableOpacity>
-                    <Ionicons name="close-outline" size={20} color="#666" />
+              </View>
+              <View style={[styles.recentSearches, { backgroundColor: theme.surface }]}>
+                {searchHistory.map((search, index) => (
+                  <TouchableOpacity 
+                    key={index}
+                    style={[styles.recentSearchItem, { borderBottomColor: theme.border }]}
+                    onPress={() => handleSuggestionPress(search)}
+                  >
+                    <View style={styles.recentSearchLeft}>
+                      <Ionicons name="time-outline" size={20} color={theme.textSecondary} />
+                      <Text style={[styles.recentSearchText, { 
+                        color: theme.text,
+                        fontSize: fontSizes.sm 
+                      }]}>{search}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => removeFromHistory(search)}>
+                      <Ionicons name="close-outline" size={20} color={theme.textSecondary} />
+                    </TouchableOpacity>
                   </TouchableOpacity>
-                </TouchableOpacity>
-              ))}
+                ))}
+              </View>
             </View>
-          </View>
+          )}
         </ScrollView>
       ) : (
         <>
           {suggestions.length > 0 && !loading && (
-            <View style={styles.suggestionsContainer}>
+            <View style={[styles.suggestionsContainer, { backgroundColor: theme.surface }]}>
               {suggestions.map((suggestion, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={styles.suggestionItem}
+                  style={[styles.suggestionItem, { borderBottomColor: theme.border }]}
                   onPress={() => handleSuggestionPress(suggestion)}
                 >
-                  <Ionicons name="search-outline" size={20} color="#666" />
-                  <Text style={styles.suggestionText}>{suggestion}</Text>
+                  <Ionicons name="search-outline" size={20} color={theme.textSecondary} />
+                  <Text style={[styles.suggestionText, { 
+                    color: theme.text,
+                    fontSize: fontSizes.sm 
+                  }]}>{suggestion}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
 
           {loading ? (
-            <View style={styles.loadingOverlay}>
+            <View style={[styles.loadingOverlay, { backgroundColor: theme.background }]}>
               <ActivityIndicator size="large" color="#ED1D24" />
             </View>
           ) : (
@@ -218,9 +279,15 @@ const SearchScreen = ({
               renderItem={renderCharacterCard}
               ListEmptyComponent={
                 <View style={styles.noResultsContainer}>
-                  <Ionicons name="search-outline" size={48} color="#666" />
-                  <Text style={styles.noResultsText}>No characters found</Text>
-                  <Text style={styles.noResultsSubText}>
+                  <Ionicons name="search-outline" size={48} color={theme.textSecondary} />
+                  <Text style={[styles.noResultsText, { 
+                    color: theme.text,
+                    fontSize: fontSizes.lg 
+                  }]}>No characters found</Text>
+                  <Text style={[styles.noResultsSubText, { 
+                    color: theme.textSecondary,
+                    fontSize: fontSizes.sm 
+                  }]}>
                     Try adjusting your search to find what you're looking for.
                   </Text>
                 </View>
@@ -236,11 +303,9 @@ const SearchScreen = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   searchContainer: {
     padding: 15,
-    backgroundColor: '#FFFFFF',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
     shadowColor: "#000",
@@ -255,7 +320,6 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
     borderRadius: 15,
     paddingHorizontal: 15,
     height: 50,
@@ -265,8 +329,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#333',
-    fontSize: 16,
     fontFamily: 'PoppinsRegular',
   },
   clearButton: {
@@ -286,14 +348,11 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   sectionTitle: {
-    fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     fontFamily: 'Poppins',
     marginBottom: 15,
   },
   clearAllText: {
-    fontSize: 14,
     color: '#ED1D24',
     fontFamily: 'PoppinsRegular',
   },
@@ -306,7 +365,6 @@ const styles = StyleSheet.create({
   trendingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     padding: 12,
     borderRadius: 12,
     marginRight: 12,
@@ -331,35 +389,13 @@ const styles = StyleSheet.create({
   },
   trendingNumberText: {
     color: '#FFFFFF',
-    fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Poppins',
   },
   trendingText: {
-    fontSize: 14,
-    color: '#333',
-    fontFamily: 'PoppinsRegular',
-  },
-  popularTagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  popularTag: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
-  },
-  popularTagText: {
-    fontSize: 14,
-    color: '#333',
     fontFamily: 'PoppinsRegular',
   },
   recentSearches: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 15,
     overflow: 'hidden',
   },
@@ -369,7 +405,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
   },
   recentSearchLeft: {
     flexDirection: 'row',
@@ -377,14 +412,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recentSearchText: {
-    fontSize: 14,
-    color: '#333',
     fontFamily: 'PoppinsRegular',
     marginLeft: 10,
     flex: 1,
   },
   suggestionsContainer: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 15,
     margin: 15,
     marginTop: 0,
@@ -403,11 +435,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
   },
   suggestionText: {
-    fontSize: 14,
-    color: '#333',
     fontFamily: 'PoppinsRegular',
     marginLeft: 15,
   },
@@ -420,7 +449,6 @@ const styles = StyleSheet.create({
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -432,15 +460,11 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   noResultsText: {
-    fontSize: 18,
     fontWeight: '600',
-    color: '#333',
     fontFamily: 'Poppins',
     marginTop: 15,
   },
   noResultsSubText: {
-    fontSize: 14,
-    color: '#666',
     fontFamily: 'PoppinsRegular',
     textAlign: 'center',
     marginTop: 8,

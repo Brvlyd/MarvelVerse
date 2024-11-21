@@ -5,6 +5,7 @@ import SplashScreen from './SplashScreen';
 import * as Font from 'expo-font';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { useState, useEffect, useCallback } from 'react';
+import { ThemeProvider } from './ThemeContext';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -43,16 +44,18 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container} onLayout={onLayoutRootView}>
-      {showSplash ? (
-        <SplashScreen onFinish={handleSplashFinish} />
-      ) : (
-        <>
-          <MarvelScreen />
-          <StatusBar style="light" />
-        </>
-      )}
-    </View>
+    <ThemeProvider>
+      <View style={styles.container} onLayout={onLayoutRootView}>
+        {showSplash ? (
+          <SplashScreen onFinish={handleSplashFinish} />
+        ) : (
+          <>
+            <MarvelScreen />
+            <StatusBar style="light" />
+          </>
+        )}
+      </View>
+    </ThemeProvider>
   );
 }
 

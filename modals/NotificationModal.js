@@ -8,8 +8,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BaseModal from './BaseModal';
+import { useTheme } from '../ThemeContext';
 
 const NotificationModal = ({ visible, onClose }) => {
+  const { theme, fontSizes } = useTheme();
   const [activeFilter, setActiveFilter] = useState('all');
   const [notifications] = useState([
     {
@@ -64,34 +66,42 @@ const NotificationModal = ({ visible, onClose }) => {
 
   return (
     <BaseModal visible={visible} onClose={onClose} position="right">
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.surface }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: theme.border }]}>
           <View>
-            <Text style={styles.headerTitle}>Notifications</Text>
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerTitle, { 
+              color: theme.text,
+              fontSize: fontSizes.lg 
+            }]}>Notifications</Text>
+            <Text style={[styles.headerSubtitle, { 
+              color: theme.textSecondary,
+              fontSize: fontSizes.sm 
+            }]}>
               {filteredNotifications.length} {activeFilter === 'unread' ? 'unread' : 'total'} notifications
             </Text>
           </View>
           <TouchableOpacity 
             onPress={onClose}
-            style={styles.closeButton}
+            style={[styles.closeButton, { backgroundColor: theme.background }]}
           >
-            <Ionicons name="close" size={24} color="#666" />
+            <Ionicons name="close" size={24} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* Filters */}
-        <View style={styles.filterContainer}>
+        <View style={[styles.filterContainer, { borderBottomColor: theme.border }]}>
           <TouchableOpacity
             onPress={() => setActiveFilter('all')}
             style={[
               styles.filterButton,
+              { backgroundColor: theme.background },
               activeFilter === 'all' && styles.filterButtonActive
             ]}
           >
             <Text style={[
               styles.filterButtonText,
+              { color: theme.textSecondary },
               activeFilter === 'all' && styles.filterButtonTextActive
             ]}>
               All
@@ -101,11 +111,13 @@ const NotificationModal = ({ visible, onClose }) => {
             onPress={() => setActiveFilter('unread')}
             style={[
               styles.filterButton,
+              { backgroundColor: theme.background },
               activeFilter === 'unread' && styles.filterButtonActive
             ]}
           >
             <Text style={[
               styles.filterButtonText,
+              { color: theme.textSecondary },
               activeFilter === 'unread' && styles.filterButtonTextActive
             ]}>
               Unread
@@ -120,7 +132,10 @@ const NotificationModal = ({ visible, onClose }) => {
               key={notification.id}
               style={[
                 styles.notificationItem,
-                !notification.read && styles.notificationItemUnread
+                { 
+                  borderBottomColor: theme.border,
+                  backgroundColor: notification.read ? theme.surface : theme.background 
+                }
               ]}
             >
               <View style={[
@@ -135,12 +150,21 @@ const NotificationModal = ({ visible, onClose }) => {
               </View>
               <View style={styles.contentContainer}>
                 <View style={styles.titleRow}>
-                  <Text style={styles.notificationTitle} numberOfLines={1}>
+                  <Text style={[styles.notificationTitle, { 
+                    color: theme.text,
+                    fontSize: fontSizes.md 
+                  }]} numberOfLines={1}>
                     {notification.title}
                   </Text>
-                  <Text style={styles.timeText}>{notification.time}</Text>
+                  <Text style={[styles.timeText, { 
+                    color: theme.textSecondary,
+                    fontSize: fontSizes.xs 
+                  }]}>{notification.time}</Text>
                 </View>
-                <Text style={styles.messageText} numberOfLines={2}>
+                <Text style={[styles.messageText, { 
+                  color: theme.textSecondary,
+                  fontSize: fontSizes.sm 
+                }]} numberOfLines={2}>
                   {notification.message}
                 </Text>
               </View>
@@ -156,25 +180,19 @@ const styles = StyleSheet.create({
   container: {
     width: 320,
     height: '100%',
-    backgroundColor: '#FFFFFF',
   },
   header: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
     fontWeight: '600',
-    color: '#333333',
     fontFamily: 'Poppins',
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#666666',
     marginTop: 4,
     fontFamily: 'PoppinsRegular',
   },
@@ -182,7 +200,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -191,20 +208,16 @@ const styles = StyleSheet.create({
     padding: 15,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   filterButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
   },
   filterButtonActive: {
     backgroundColor: '#FFEBEE',
   },
   filterButtonText: {
-    fontSize: 14,
-    color: '#666666',
     fontFamily: 'PoppinsRegular',
   },
   filterButtonTextActive: {
@@ -218,11 +231,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    backgroundColor: '#FFFFFF',
-  },
-  notificationItemUnread: {
-    backgroundColor: '#F8F9FA',
   },
   iconContainer: {
     width: 40,
@@ -242,28 +250,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   notificationTitle: {
-    fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
     flex: 1,
     marginRight: 8,
     fontFamily: 'Poppins',
   },
   timeText: {
-    fontSize: 12,
-    color: '#666666',
     fontFamily: 'PoppinsRegular',
   },
   messageText: {
-    fontSize: 14,
-    color: '#666666',
     lineHeight: 20,
     fontFamily: 'PoppinsRegular',
-  },
-  footer: {
-    padding: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
   },
 });
 

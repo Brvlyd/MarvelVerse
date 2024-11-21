@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Image, StyleSheet, Dimensions, Animated, Easing } from 'react-native'; // Tambahkan import Easing
+import { View, Image, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
+import { useTheme } from './ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen({ onFinish }) {
+  const { theme } = useTheme();
   const fadeAnim = new Animated.Value(0);
 
   useEffect(() => {
@@ -13,14 +15,14 @@ export default function SplashScreen({ onFinish }) {
         toValue: 1,
         duration: 500,
         useNativeDriver: true,
-        easing: Easing.linear, // Menggunakan Easing.linear sebagai gantinya
+        easing: Easing.linear,
       }),
       Animated.delay(1000),
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 500,
         useNativeDriver: true,
-        easing: Easing.linear, // Menggunakan Easing.linear sebagai gantinya
+        easing: Easing.linear,
       }),
     ]).start(() => {
       onFinish && onFinish();
@@ -28,7 +30,7 @@ export default function SplashScreen({ onFinish }) {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.surface }]}>
       <Animated.View
         style={[
           styles.logoContainer,
@@ -50,7 +52,6 @@ export default function SplashScreen({ onFinish }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     width: width,

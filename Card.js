@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from './ThemeContext';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width / 2 - 24;
 
 const CharacterCard = ({ item, isFavorite, onToggleFavorite, onPress }) => {
+  const { theme, fontSizes } = useTheme();
   const scaleAnim = useState(new Animated.Value(1))[0];
   const shadowAnim = useState(new Animated.Value(1))[0];
 
@@ -57,7 +59,7 @@ const CharacterCard = ({ item, isFavorite, onToggleFavorite, onPress }) => {
           })
         }
       ]}>
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.surface }]}>
           <Image
             style={styles.image}
             source={{ 
@@ -65,7 +67,6 @@ const CharacterCard = ({ item, isFavorite, onToggleFavorite, onPress }) => {
             }}
             defaultSource={require('./assets/placeholder.png')}
           />
-          {/* Gradient overlay on image */}
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.8)']}
             style={styles.gradient}
@@ -74,13 +75,18 @@ const CharacterCard = ({ item, isFavorite, onToggleFavorite, onPress }) => {
           <View style={styles.contentWrapper}>
             <View style={styles.cardContent}>
               <View style={styles.nameContainer}>
-                <Text style={styles.name} numberOfLines={2}>
+                <Text style={[styles.name, { 
+                  color: '#FFFFFF',
+                  fontSize: fontSizes.md
+                }]} numberOfLines={2}>
                   {item.name}
                 </Text>
               </View>
               
               <TouchableOpacity
-                style={styles.favoriteButton}
+                style={[styles.favoriteButton, {
+                  backgroundColor: theme.surface + '33'  // 20% opacity
+                }]}
                 onPress={() => onToggleFavorite(item)}
               >
                 <Animated.View style={styles.favoriteIconContainer}>
@@ -115,7 +121,6 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     overflow: 'hidden',
     position: 'relative',
@@ -151,8 +156,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   name: {
-    color: '#FFFFFF',
-    fontSize: 16,
     fontFamily: 'Poppins',
     fontWeight: '700',
     marginBottom: 4,
@@ -161,7 +164,6 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   favoriteButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 16,
     padding: 8,
     backdropFilter: 'blur(10px)',
